@@ -54,10 +54,7 @@ export default class MattCirclesStyle extends Style {
       y += size
       for (let j = 0; j < 160; j++) {
         // intermingles line1 and line2
-        const line1 = [new Vector(x, y - size), new Vector(x - size, y)]
-        const line2 = [new Vector(x - size, y - size), new Vector(x, y)]
-        const lines = [line2, line1]
-        if (j % 2 === 0) lines.reverse()
+        const line = [new Vector(x, y - size), new Vector(x - size, y)]
         y = (j % 2 === 0) ? y + size / 6 : y - size / 6
         x -= 0.8 * weight
 
@@ -66,12 +63,10 @@ export default class MattCirclesStyle extends Style {
           this._p5.stroke(color)
           x += 1.5 * weight
           y = (k % 2 === 0) ? y + size / 10 : y - size / 10
-          const line = lines.pop()
           this._p5.line(line[0].x, line[0].y, line[1].x, line[1].y)
         }
       }
     }
-
     this._p5.pop()
   }
 
