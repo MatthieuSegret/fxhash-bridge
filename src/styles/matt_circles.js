@@ -11,47 +11,41 @@ export default class MattCirclesStyle extends Style {
   constructor (gridSizeX, gridSizeY, s, projectionCalculator3d, p5) {
     super(gridSizeX, gridSizeY, s, projectionCalculator3d, p5)
     this.refSize = this._s * 0.04
-    this.bgColors = ['#03045E', '#02316F', '#012C65', '#00466B']
-    this.tilesColors = ['#212529', '#343a40', '#495057', '#6c757d']
 
-    this.tilesMask = this._p5.createGraphics(s, s)
-    this.tilesTexture = this._p5.createGraphics(s, s)
+    // Initialize colors
+    this.bgColors = ['#03045E', '#02316F', '#012C65', '#00466B']
+    this.birdsColors = ['#0096c7', '#00b4d8', '#48cae4']
+
+    // Create textures and mask for birds
+    this.birdsMask = this.createGraphics(s, s)
+    this.birdsTexture = this.createGraphics(s, s)
   }
 
   beforeDraw () {
-    this.background(this.bgColors)
-    this.background(this.tilesColors, this.tilesTexture)
-
-    // Initialize tiles graphics
-    this.tilesMask.background(this._p5.color(255, 255, 255, 0))
-
-    const pixelDensity = this._p5.pixelDensity()
-    this.tilesMask.scale(1 / pixelDensity, 1 / pixelDensity)
+    // Generate textures
+    this.background(this.bgColors, '#000', this._p5)
+    this.background(this.birdsColors, '#023e8a', this.birdsTexture)
   }
 
   drawTile (tilePoints, frontLeftCorner3DCoord, isBorder) {
-    this.tilesMask.push()
-    this.tilesMask.fill('#000000')
-    this.tilesMask.quad(tilePoints[0].x * this._s, tilePoints[0].y * this._s, tilePoints[1].x * this._s, tilePoints[1].y * this._s, tilePoints[2].x * this._s, tilePoints[2].y * this._s, tilePoints[3].x * this._s, tilePoints[3].y * this._s)
-    this.tilesMask.pop()
+    // Draw birds on mask
+    this.birdsMask.push()
+    this.birdsMask.fill('#000000')
+    if (!isBorder) this.bird(tilePoints, this.birdsMask)
+    this.birdsMask.pop()
   }
 
   afterDraw () {
-    const tilesMaskImg = this.toImage(this.tilesMask, 2)
-    const tilesImg = this.toImage(this.tilesTexture, 2)
-    tilesImg.mask(tilesMaskImg)
-    this._p5.image(tilesImg, 0, 0, this.s, this.s)
+    // Draw birds with textures on sketch
+    this.drawImage(this.birdsMask, this.birdsTexture)
   }
 
-  background (colors, graphics) {
-    const g = (graphics === undefined) ? this._p5 : graphics
+  background (colors, shadowColor, g) {
     const rs = this.refSize
     const size = rs * 0.25
     const weight = rs * 0.12
-    const pixelDensity = this._p5.pixelDensity()
 
     g.push()
-    if (graphics !== undefined) g.scale(1 / pixelDensity, 1 / pixelDensity)
     g.background(this.bgColors[0])
     g.noFill()
     g.strokeWeight(weight)
@@ -60,7 +54,7 @@ export default class MattCirclesStyle extends Style {
     const dc = g.drawingContext
     dc.shadowOffsetX = rs * 0.03
     dc.shadowOffsetY = rs * 0.03
-    dc.shadowColor = '#000'
+    dc.shadowColor = shadowColor
 
     let x = 0
     let y = 0
@@ -84,6 +78,31 @@ export default class MattCirclesStyle extends Style {
     g.pop()
   }
 
+  bird (tilePoints, g) {
+    // Don't display the birds over 1/3 of the sky
+    if (tilePoints[3].y * this._s < this._s / 3) return
+    // Displays less birds
+    if (this._p5.random() >= 0.5) return
+
+    const weight = this._p5.map(tilePoints[3].y * this._s, this._s / 3, this._s, this.refSize * 0.05, this.refSize * 0.2)
+    const h = tilePoints[3].y - tilePoints[2].y
+    const w = tilePoints[1].x - tilePoints[2].x
+    const p0 = new Vector((tilePoints[3].x + tilePoints[0].x) / 2 * this._s, (tilePoints[3].y - 2 * h / 3) * this._s)
+    const p1 = new Vector((tilePoints[2].x + 1 / 6 * w) * this._s, tilePoints[2].y * this._s)
+    const p2 = new Vector((tilePoints[1].x - 1 / 6 * w) * this._s, tilePoints[1].y * this._s)
+
+    g.push()
+    g.noFill()
+    g.strokeWeight(weight)
+
+    g.beginShape()
+    g.vertex(p1.x, p1.y)
+    g.vertex(p0.x, p0.y)
+    g.vertex(p2.x, p2.y)
+    g.endShape()
+    g.pop()
+  }
+
   toImage (g, density) {
     density ||= g.pixelDensity()
     const img = this._p5.createImage(g.width * density, g.height * density)
@@ -91,11 +110,26 @@ export default class MattCirclesStyle extends Style {
     return img
   }
 
+  drawImage (mask, texture) {
+    const maskImg = this.toImage(mask)
+    const img = this.toImage(texture)
+    img.mask(maskImg)
+    this._p5.image(img, 0, 0, this.s, this.s)
+  }
+
+  createGraphics (w, h) {
+    const g = this._p5.createGraphics(w, h)
+    const pixelDensity = this._p5.pixelDensity()
+    g.scale(1 / pixelDensity, 1 / pixelDensity)
+    g.background(this._p5.color(255, 255, 255, 0))
+    return g
+  }
+
   static author () {
     return 'Matt Circles'
   }
 
   static name () {
-    return 'Under the stars'
+    return 'Birds under the stars'
   }
 }
