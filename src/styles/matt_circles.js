@@ -78,7 +78,7 @@ export default class MattCirclesStyle extends Style {
     stars.forEach((star) => {
       const drawStar = this._p5.random([this.star1, this.star2])
       const nbRay = this._p5.random([3, 4, 5])
-      drawStar(star.x, star.y, star.size, nbRay, g)
+      drawStar.call(this, star.x, star.y, star.size, nbRay, g)
     })
     g.pop()
   }
@@ -121,7 +121,8 @@ export default class MattCirclesStyle extends Style {
   star1 (x, y, r, nbRays, g) {
     g.push()
     g.noFill()
-    for (let a = 0; a < 2 * Math.PI; a += Math.PI / nbRays) {
+    const start = this._p5.random(-Math.PI / 6)
+    for (let a = start; a < 2 * Math.PI - start; a += Math.PI / nbRays) {
       const p1 = new Vector(x + r * Math.cos(a), y + r * Math.sin(a))
       const p2 = new Vector(x + r * Math.cos(a - Math.PI), y + r * Math.sin(a - Math.PI))
       g.line(p1.x, p1.y, p2.x, p2.y)
@@ -134,7 +135,8 @@ export default class MattCirclesStyle extends Style {
     g.noStroke()
     g.beginShape()
     let i = 0
-    for (let a = 0; a < 2 * Math.PI; a += Math.PI / nbRays) {
+    const start = this._p5.random(-Math.PI / 6)
+    for (let a = start; a < 2 * Math.PI - start; a += Math.PI / nbRays) {
       const radius = i % 2 === 0 ? r : r / 2
       g.vertex(x + radius * Math.cos(a), y + radius * Math.sin(a))
       i++
