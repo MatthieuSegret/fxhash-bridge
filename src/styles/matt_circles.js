@@ -12,6 +12,9 @@ export default class MattCirclesStyle extends Style {
     super(gridSizeX, gridSizeY, s, projectionCalculator3d, p5)
     this.refSize = this._s * 0.04
     this.starsGap = this.refSize * 1
+    this.minSkyHeight = this._s / 3
+    this.borderGap = this._s / 20
+    this.nbStars = 200
 
     // Initialize colors
     this.bgColors = ['#03045E', '#02316F', '#012C65', '#00466B']
@@ -26,6 +29,7 @@ export default class MattCirclesStyle extends Style {
     // Create textures and mask for birds
     this.birdsMask = this.createGraphics(s, s)
     this.birdsTexture = this.createGraphics(s, s)
+    this.birdsArea = this.getBirdsArea()
 
     // Create textures and mask for stars
     this.starsMask = this.createGraphics(s, s)
@@ -37,38 +41,61 @@ export default class MattCirclesStyle extends Style {
     this.background(this.bgColors, this.bgShadowColor, this._p5)
     this.background(this.birdsColors, this.birdsShadowColor, this.birdsTexture)
     this.background(this.starsColors, this.starsShadowColor, this.starsTexture)
-
-    // this.background(this.starsColors, this.starsShadowColor, this._p5)
   }
 
   drawTile (tilePoints, frontLeftCorner3DCoord, isBorder) {
     // Draw birds on mask
     this.birdsMask.push()
-    this.birdsMask.fill('#000000')
-    if (!isBorder) this.bird(tilePoints, this.birdsMask)
+    this.birdsMask.fill('#000')
+    this.bird(tilePoints, this.birdsMask)
     this.birdsMask.pop()
   }
 
   afterDraw () {
-    // // Draw stars on mask
-    this.drawStarsMask(200, this.starsMask)
+    // Draw stars on mask
+    this.drawStarsMask(this.nbStars, this.starsMask)
 
     // Draw birds and stars with textures on sketch
     this.drawImage(this.birdsMask, this.birdsTexture)
     this.drawImage(this.starsMask, this.starsTexture)
 
     // Draw border
-    this.border(this._s / 20, this.bgColors[0])
+    this.border(this.borderGap, this.bgColors[0])
+  }
+
+  getBirdsArea () {
+    const p1 = this._p5.createVector().set(this._projectionCalculator3d.getProjectedPoint([-this._gridSizeX / 2, 0, 0]))
+    const p2 = this._p5.createVector().set(this._projectionCalculator3d.getProjectedPoint([this._gridSizeX / 2, 0, 0]))
+    const p3 = this._p5.createVector().set(this._projectionCalculator3d.getProjectedPoint([-this._gridSizeX / 2, this._gridSizeY, 0]))
+    const p4 = this._p5.createVector().set(this._projectionCalculator3d.getProjectedPoint([this._gridSizeX / 2, this._gridSizeY, 0]))
+    const gap = this.refSize * 1.2
+
+    const area = [p1, p2, p3, p4].map((p) => {
+      return new Vector(p.x * this._s, p.y * this._s)
+    })
+
+    if (area[2].y < this.minSkyHeight) area[2].y = this.minSkyHeight
+    if (area[3].y < this.minSkyHeight) area[3].y = this.minSkyHeight
+
+    const g = this.createGraphics(this._s, this._s)
+    g.background('#fff')
+    g.fill('#000')
+    g.quad(area[0].x - gap, area[0].y, area[1].x + gap, area[1].y, area[3].x + gap, area[3].y - gap, area[2].x - gap, area[2].y - gap)
+
+    const img = this.toImage(g)
+    img.loadPixels()
+    return img
   }
 
   drawStarsMask (nbStars, g) {
     const stars = []
+    const [smallSize, mediumSize, largeSize] = [0.3 * this.refSize, 0.5 * this.refSize, 0.7 * this.refSize]
 
     for (let i = 0; i < nbStars; i++) {
       // Draw the biggest ones first
-      let size = 0.7 * this.refSize
-      if (i > nbStars * 0.2 && i <= nbStars * 0.5) size = 0.5 * this.refSize
-      if (i > nbStars * 0.2) size = 0.3 * this.refSize
+      let size = largeSize
+      if (i > nbStars * 0.2 && i <= nbStars * 0.5) size = mediumSize
+      if (i > nbStars * 0.2) size = smallSize
       const newStar = this.tryCreateStar(stars, size)
       if (newStar) stars.push(newStar)
     }
@@ -96,6 +123,10 @@ export default class MattCirclesStyle extends Style {
         }
       })
 
+      if (!this.inTheSky(star)) {
+        star = undefined
+      }
+
       attempts++
       if (attempts > 100) {
         break
@@ -106,7 +137,7 @@ export default class MattCirclesStyle extends Style {
   }
 
   createStar (size) {
-    const border = this._s / 18
+    const border = this.borderGap + this.refSize * 0.2
     const x = this._p5.random(border, this._s - border)
     const y = this._p5.random(border, this._s - border)
     return { x, y, size }
@@ -116,6 +147,15 @@ export default class MattCirclesStyle extends Style {
     if (s1 === undefined || s2 === undefined) return true
     const d = this._p5.dist(s1.x, s1.y, s2.x, s2.y)
     return d < s1.size / 2 + s2.size / 2 + this.starsGap
+  }
+
+  inTheSky (star) {
+    if (star === undefined) return false
+    const img = this.birdsArea
+    const [r, g, b] = img.get(star.x, star.y)
+    const pixelc = this._p5.color(r, g, b)
+
+    return (pixelc.toString() === this._p5.color(255).toString())
   }
 
   star1 (x, y, r, nbRays, g) {
@@ -147,11 +187,10 @@ export default class MattCirclesStyle extends Style {
 
   bird (tilePoints, g) {
     // Don't display the birds over 1/3 of the sky
-    if (tilePoints[3].y * this._s < this._s / 3) return
-    // Displays less birds
-    if (this._p5.random() >= 0.5) return
+    if (tilePoints[3].y * this._s < this.minSkyHeight) return
 
-    const weight = this._p5.map(tilePoints[3].y * this._s, this._s / 3, this._s, this.refSize * 0.05, this.refSize * 0.2)
+    const [minWeight, maxWeight] = [this.refSize * 0.05, this.refSize * 0.2]
+    const weight = this._p5.map(tilePoints[3].y * this._s, this.minSkyHeight, this._s, minWeight, maxWeight)
     const h = tilePoints[3].y - tilePoints[2].y
     const w = tilePoints[1].x - tilePoints[2].x
     const p0 = new Vector((tilePoints[3].x + tilePoints[0].x) / 2 * this._s, (tilePoints[3].y - 2 * h / 3) * this._s)
