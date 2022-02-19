@@ -34,6 +34,8 @@ export default class MattCirclesStyle extends Style {
     // Create textures and mask for stars
     this.starsMask = this.createGraphics(s, s)
     this.starsTexture = this.createGraphics(s, s)
+
+    this.flowField = this.createFlowField()
   }
 
   beforeDraw () {
@@ -211,7 +213,7 @@ export default class MattCirclesStyle extends Style {
 
   background (colors, shadowColor, g) {
     const rs = this.refSize
-    const size = rs * 0.25
+    const size = rs * 0.35
     const weight = rs * 0.12
 
     g.push()
@@ -226,21 +228,22 @@ export default class MattCirclesStyle extends Style {
     dc.shadowColor = shadowColor
 
     let x = 0
-    let y = 0
-    for (let i = 0; i < 100; i++) {
-      x = 0
-      y += size
-      for (let j = 0; j < 100; j++) {
-        const line = [new Vector(x, y - size), new Vector(x - size, y)]
-        y = (j % 2 === 0) ? y + size / 6 : y - size / 6
-        x -= 0.8 * weight
-
+    let y = -size
+    for (let i = 0; i < 110; i++) {
+      x = (i % 2 === 0) ? -4.4 * weight : 0
+      y += size - 1 * weight
+      for (let j = 0; j < 50; j++) {
         for (let k = 0; k < 2; k++) {
           const color = g.random(colors)
           g.stroke(color)
-          x += 1.5 * weight
-          y = (k % 2 === 0) ? y + size / 10 : y - size / 10
-          g.line(line[0].x, line[0].y, line[1].x, line[1].y)
+          x += 2.2 * weight
+          y = (k % 2 === 0) ? y + size / 8 : y - size / 8
+
+          g.push()
+          g.translate(x, y)
+          g.rotate(this.flowField[i][j])
+          g.line(0, 0, 0, size)
+          g.pop()
         }
       }
     }
@@ -252,6 +255,24 @@ export default class MattCirclesStyle extends Style {
     this._p5.strokeWeight(weight)
     this._p5.noFill()
     this._p5.rect(0, 0, this._s, this._s)
+  }
+
+  createFlowField () {
+    const flowField = []
+    const inc = 0.02
+    let yoff = 0
+
+    for (let y = 0; y < 110; y++) {
+      let xoff = 0
+      flowField[y] = []
+      for (let x = 0; x < 50; x++) {
+        flowField[y][x] = this._p5.noise(xoff, yoff) * Math.PI * 2
+        xoff += inc
+      }
+      yoff += inc
+    }
+
+    return flowField
   }
 
   toImage (g, density) {
