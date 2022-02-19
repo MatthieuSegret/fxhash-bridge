@@ -24,18 +24,18 @@ export default class MattCirclesStyle extends Style {
     this.birdsShadowColor = '#023e8a'
 
     this.starsColors = ['#ffba08', '#faa307', '#f48c06']
-    this.starsShadowColor = '#e85d04'
+    this.starsShadowColor = '#dc2f02'
+
+    this.flowField = this.createFlowField()
+    this.birdsArea = this.getBirdsArea()
 
     // Create textures and mask for birds
     this.birdsMask = this.createGraphics(s, s)
     this.birdsTexture = this.createGraphics(s, s)
-    this.birdsArea = this.getBirdsArea()
 
     // Create textures and mask for stars
     this.starsMask = this.createGraphics(s, s)
     this.starsTexture = this.createGraphics(s, s)
-
-    this.flowField = this.createFlowField()
   }
 
   beforeDraw () {
@@ -63,30 +63,7 @@ export default class MattCirclesStyle extends Style {
 
     // Draw border
     this.border(this.borderGap, this.bgColors[0])
-  }
-
-  getBirdsArea () {
-    const p1 = this._p5.createVector().set(this._projectionCalculator3d.getProjectedPoint([-this._gridSizeX / 2, 0, 0]))
-    const p2 = this._p5.createVector().set(this._projectionCalculator3d.getProjectedPoint([this._gridSizeX / 2, 0, 0]))
-    const p3 = this._p5.createVector().set(this._projectionCalculator3d.getProjectedPoint([-this._gridSizeX / 2, this._gridSizeY, 0]))
-    const p4 = this._p5.createVector().set(this._projectionCalculator3d.getProjectedPoint([this._gridSizeX / 2, this._gridSizeY, 0]))
-    const gap = this.refSize * 1.2
-
-    const area = [p1, p2, p3, p4].map((p) => {
-      return new Vector(p.x * this._s, p.y * this._s)
-    })
-
-    if (area[2].y < this.minSkyHeight) area[2].y = this.minSkyHeight
-    if (area[3].y < this.minSkyHeight) area[3].y = this.minSkyHeight
-
-    const g = this.createGraphics(this._s, this._s)
-    g.background('#fff')
-    g.fill('#000')
-    g.quad(area[0].x - gap, area[0].y, area[1].x + gap, area[1].y, area[3].x + gap, area[3].y - gap, area[2].x - gap, area[2].y - gap)
-
-    const img = this.toImage(g)
-    img.loadPixels()
-    return img
+    // this._p5.image(this.birdsArea, 0, 0, this._s, this._s)
   }
 
   drawStarsMask (nbStars, g) {
@@ -211,6 +188,31 @@ export default class MattCirclesStyle extends Style {
     g.pop()
   }
 
+  getBirdsArea () {
+    const p1 = this._p5.createVector().set(this._projectionCalculator3d.getProjectedPoint([-this._gridSizeX / 2, 0, 0]))
+    const p2 = this._p5.createVector().set(this._projectionCalculator3d.getProjectedPoint([this._gridSizeX / 2, 0, 0]))
+    const p3 = this._p5.createVector().set(this._projectionCalculator3d.getProjectedPoint([-this._gridSizeX / 2, this._gridSizeY, 0]))
+    const p4 = this._p5.createVector().set(this._projectionCalculator3d.getProjectedPoint([this._gridSizeX / 2, this._gridSizeY, 0]))
+    const gap = this.refSize * 1.2
+
+    const area = [p1, p2, p3, p4].map((p) => {
+      return new Vector(p.x * this._s, p.y * this._s)
+    })
+
+    if (area[2].y < this.minSkyHeight) area[2].y = this.minSkyHeight
+    if (area[3].y < this.minSkyHeight) area[3].y = this.minSkyHeight
+
+    const g = this.createGraphics(this._s, this._s)
+    g.pixelDensity(1)
+    g.background('#fff')
+    g.fill('#000')
+    g.quad(area[0].x - gap, area[0].y, area[1].x + gap, area[1].y, area[3].x + gap, area[3].y - gap, area[2].x - gap, area[2].y - gap)
+
+    const img = this.toImage(g)
+    img.loadPixels()
+    return img
+  }
+
   background (colors, shadowColor, g) {
     const rs = this.refSize
     const size = rs * 0.35
@@ -286,13 +288,11 @@ export default class MattCirclesStyle extends Style {
     const maskImg = this.toImage(mask)
     const img = this.toImage(texture)
     img.mask(maskImg)
-    this._p5.image(img, 0, 0, this.s, this.s)
+    this._p5.image(img, 0, 0, this._s, this._s)
   }
 
   createGraphics (w, h) {
     const g = this._p5.createGraphics(w, h)
-    const pixelDensity = this._p5.pixelDensity()
-    g.scale(1 / pixelDensity, 1 / pixelDensity)
     g.background(this._p5.color(255, 255, 255, 0))
     return g
   }
