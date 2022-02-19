@@ -9,7 +9,7 @@ import Style from './style'
 import { createCols } from '../utils'
 
 const bgPalettes = createCols('https://coolors.co/03045E-02316F-012C65-00466B-000000')
-const birdsPalettes = createCols('https://coolors.co/palette/0096c7-00b4d8-48cae4-023e8a')
+const rainPalettes = createCols('https://coolors.co/palette/03045e-023e8a-0077b6-0096c7-00b4d8-48cae4-90e0ef-ade8f4-caf0f8').reverse()
 const starsPalettes = createCols('https://coolors.co/palette/ffba08-faa307-f48c06-dc2f02')
 
 export default class MattCirclesStyle extends Style {
@@ -17,7 +17,7 @@ export default class MattCirclesStyle extends Style {
     super(gridSizeX, gridSizeY, s, projectionCalculator3d, p5)
     this.refSize = this._s * 0.04
     this.starsGap = this.refSize * 1
-    this.minSkyHeight = this._s / 3
+    this.minSkyHeight = 5 * this._s / 12
     this.borderGap = this._s / 20
     this.nbStars = 200
 
@@ -25,18 +25,18 @@ export default class MattCirclesStyle extends Style {
     this.bgColors = bgPalettes.slice(0, 4)
     this.bgShadowColor = bgPalettes[4]
 
-    this.birdsColors = birdsPalettes.slice(0, 3)
-    this.birdsShadowColor = birdsPalettes[3]
+    this.rainColors = rainPalettes.slice(2, 6)
+    this.rainShadowColor = rainPalettes[7]
 
     this.starsColors = starsPalettes.slice(0, 3)
     this.starsShadowColor = starsPalettes[3]
 
     this.flowField = this.createFlowField()
-    this.birdsArea = this.getBirdsArea()
+    this.rainArea = this.getRainArea()
 
-    // Create textures and mask for birds
-    this.birdsMask = this.createGraphics(s, s)
-    this.birdsTexture = this.createGraphics(s, s)
+    // Create textures and mask for rain
+    this.rainMask = this.createGraphics(s, s)
+    this.rainTexture = this.createGraphics(s, s)
 
     // Create textures and mask for stars
     this.starsMask = this.createGraphics(s, s)
@@ -46,29 +46,29 @@ export default class MattCirclesStyle extends Style {
   beforeDraw () {
     // Generate textures
     this.background(this.bgColors, this.bgShadowColor, this._p5)
-    this.background(this.birdsColors, this.birdsShadowColor, this.birdsTexture)
+    this.background(this.rainColors, this.rainShadowColor, this.rainTexture)
     this.background(this.starsColors, this.starsShadowColor, this.starsTexture)
   }
 
   drawTile (tilePoints, frontLeftCorner3DCoord, isBorder) {
-    // Draw birds on mask
-    this.birdsMask.push()
-    this.birdsMask.fill('#000')
-    this.bird(tilePoints, this.birdsMask)
-    this.birdsMask.pop()
+    // Draw rain on mask
+    this.rainMask.push()
+    this.rainMask.fill('#000')
+    this.rain(frontLeftCorner3DCoord, this.rainMask)
+    this.rainMask.pop()
   }
 
   afterDraw () {
     // Draw stars on mask
     this.drawStarsMask(this.nbStars, this.starsMask)
 
-    // Draw birds and stars with textures on sketch
-    this.drawImage(this.birdsMask, this.birdsTexture)
+    // Draw rain and stars with textures on sketch
+    this.drawImage(this.rainMask, this.rainTexture)
     this.drawImage(this.starsMask, this.starsTexture)
 
     // Draw border
     this.border(this.borderGap, this.bgColors[0])
-    // this._p5.image(this.birdsArea, 0, 0, this._s, this._s)
+    // this._p5.image(this.rainArea, 0, 0, this._s, this._s)
   }
 
   drawStarsMask (nbStars, g) {
@@ -135,7 +135,7 @@ export default class MattCirclesStyle extends Style {
 
   inTheSky (star) {
     if (star === undefined) return false
-    const img = this.birdsArea
+    const img = this.rainArea
     const [r, g, b] = img.get(star.x, star.y)
     const pixelc = this._p5.color(r, g, b)
 
@@ -169,36 +169,40 @@ export default class MattCirclesStyle extends Style {
     g.pop()
   }
 
-  bird (tilePoints, g) {
-    // Don't display the birds over 1/3 of the sky
-    if (tilePoints[3].y * this._s < this.minSkyHeight) return
+  rain (frontLeftCorner3DCoord, g) {
+    const w = 0.08
+    const h = 0.7
+    const p1 = new Vector(0.5 - w / 2, 0.5 - h / 2)
+    const p2 = new Vector(0.5 + w / 2, 0.5 - h / 2)
+    const p3 = new Vector(0.5 + w / 2, 0.5 + h / 2)
+    const p4 = new Vector(0.5 - w / 2, 0.5 + h / 2)
+    const points3D = [p1, p2, p3, p4]
 
-    const [minWeight, maxWeight] = [this.refSize * 0.05, this.refSize * 0.2]
-    const weight = this._p5.map(tilePoints[3].y * this._s, this.minSkyHeight, this._s, minWeight, maxWeight)
-    const h = tilePoints[3].y - tilePoints[2].y
-    const w = tilePoints[1].x - tilePoints[2].x
-    const p0 = new Vector((tilePoints[3].x + tilePoints[0].x) / 2 * this._s, (tilePoints[3].y - 2 * h / 3) * this._s)
-    const p1 = new Vector((tilePoints[2].x + 1 / 6 * w) * this._s, tilePoints[2].y * this._s)
-    const p2 = new Vector((tilePoints[1].x - 1 / 6 * w) * this._s, tilePoints[1].y * this._s)
+    const [i, j, height] = [frontLeftCorner3DCoord.x, frontLeftCorner3DCoord.y, frontLeftCorner3DCoord.z]
+    const points2D = points3D.map((point3D) => {
+      const coords = [i + point3D.x, j + point3D.y, height]
+      const [x2D, y2D] = this._projectionCalculator3d.getProjectedPoint(coords)
+      return new Vector(x2D * this._s, y2D * this._s)
+    })
+
+    // Don't display the rain over 1/3 of the sky
+    if (points2D[0].y < this.minSkyHeight) return
 
     g.push()
-    g.noFill()
-    g.strokeWeight(weight)
-
     g.beginShape()
-    g.vertex(p1.x, p1.y)
-    g.vertex(p0.x, p0.y)
-    g.vertex(p2.x, p2.y)
-    g.endShape()
+    points2D.forEach((point) => {
+      g.vertex(point.x, point.y)
+    })
+    g.endShape(g.CLOSE)
     g.pop()
   }
 
-  getBirdsArea () {
+  getRainArea () {
     const p1 = this._p5.createVector().set(this._projectionCalculator3d.getProjectedPoint([-this._gridSizeX / 2, 0, 0]))
     const p2 = this._p5.createVector().set(this._projectionCalculator3d.getProjectedPoint([this._gridSizeX / 2, 0, 0]))
     const p3 = this._p5.createVector().set(this._projectionCalculator3d.getProjectedPoint([-this._gridSizeX / 2, this._gridSizeY, 0]))
     const p4 = this._p5.createVector().set(this._projectionCalculator3d.getProjectedPoint([this._gridSizeX / 2, this._gridSizeY, 0]))
-    const gap = this.refSize * 1.2
+    const gap = this.refSize * 1.5
 
     const area = [p1, p2, p3, p4].map((p) => {
       return new Vector(p.x * this._s, p.y * this._s)
@@ -212,7 +216,6 @@ export default class MattCirclesStyle extends Style {
     g.background('#fff')
     g.fill('#000')
     g.quad(area[0].x - gap, area[0].y, area[1].x + gap, area[1].y, area[3].x + gap, area[3].y - gap, area[2].x - gap, area[2].y - gap)
-
     const img = this.toImage(g)
     img.loadPixels()
     return img
@@ -307,6 +310,6 @@ export default class MattCirclesStyle extends Style {
   }
 
   static name () {
-    return 'Birds under the stars'
+    return 'Rain under the stars'
   }
 }
