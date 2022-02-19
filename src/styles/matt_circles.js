@@ -6,6 +6,11 @@
 
 import { Vector } from 'p5'
 import Style from './style'
+import { createCols } from '../utils'
+
+const bgPalettes = createCols('https://coolors.co/03045E-02316F-012C65-00466B-000000')
+const birdsPalettes = createCols('https://coolors.co/palette/0096c7-00b4d8-48cae4-023e8a')
+const starsPalettes = createCols('https://coolors.co/palette/ffba08-faa307-f48c06-dc2f02')
 
 export default class MattCirclesStyle extends Style {
   constructor (gridSizeX, gridSizeY, s, projectionCalculator3d, p5) {
@@ -17,14 +22,14 @@ export default class MattCirclesStyle extends Style {
     this.nbStars = 200
 
     // Initialize colors
-    this.bgColors = ['#03045E', '#02316F', '#012C65', '#00466B']
-    this.bgShadowColor = '#000'
+    this.bgColors = bgPalettes.slice(0, 4)
+    this.bgShadowColor = bgPalettes[4]
 
-    this.birdsColors = ['#0096c7', '#00b4d8', '#48cae4']
-    this.birdsShadowColor = '#023e8a'
+    this.birdsColors = birdsPalettes.slice(0, 3)
+    this.birdsShadowColor = birdsPalettes[3]
 
-    this.starsColors = ['#ffba08', '#faa307', '#f48c06']
-    this.starsShadowColor = '#dc2f02'
+    this.starsColors = starsPalettes.slice(0, 3)
+    this.starsShadowColor = starsPalettes[3]
 
     this.flowField = this.createFlowField()
     this.birdsArea = this.getBirdsArea()
