@@ -8,13 +8,29 @@ import { Vector } from 'p5'
 import Style from './style'
 import { createCols } from '../utils'
 
-const bgPalettes = createCols('https://coolors.co/03045E-02316F-012C65-00466B-000000')
-const rainPalettes = createCols('https://coolors.co/palette/03045e-023e8a-0077b6-0096c7-00b4d8-48cae4-90e0ef-ade8f4-caf0f8').reverse()
-const starsPalettes = createCols('https://coolors.co/palette/ffba08-faa307-f48c06-dc2f02')
+const palettes = [
+  {
+    bgPalettes: createCols('https://coolors.co/03045E-02316F-012C65-00466B-000000'),
+    rainPalettes: createCols('https://coolors.co/palette/023e8a-0077b6-0096c7-00b4d8-48cae4-90e0ef').reverse(),
+    starsPalettes: createCols('https://coolors.co/palette/ffba08-faa307-faa307-f48c06-dc2f02-dc2f02')
+  },
+  {
+    bgPalettes: createCols('https://coolors.co/palette/f8f9fa-e9ecef-dee2e6-dee2e6-adb5bd-6c757d-495057-343a40-212529'),
+    rainPalettes: createCols('https://coolors.co/palette/03045e-023e8a-6a040f-9d0208-d00000-dc2f02-e85d04-f48c06').reverse(),
+    starsPalettes: createCols('https://coolors.co/palette/03045e-023e8a-6a040f-9d0208-d00000-dc2f02-e85d04-f48c06').reverse()
+  },
+  {
+    bgPalettes: createCols('https://coolors.co/palette/f8f9fa-e9ecef-dee2e6-dee2e6-adb5bd-6c757d-495057-343a40-212529'),
+    rainPalettes: createCols('https://coolors.co/palette/90caf9-42a5f5-1e88e5-1976d2-1565c0-0d47a1'),
+    starsPalettes: createCols('https://coolors.co/palette/90caf9-42a5f5-1e88e5-1976d2-1565c0-0d47a1')
+  }
+]
 
 export default class MattCirclesStyle extends Style {
   constructor (gridSizeX, gridSizeY, s, projectionCalculator3d, p5) {
     super(gridSizeX, gridSizeY, s, projectionCalculator3d, p5)
+
+    // Parameters
     this.refSize = this._s * 0.04
     this.starsGap = this.refSize * 1
     this.minSkyHeight = 5 * this._s / 12
@@ -24,14 +40,16 @@ export default class MattCirclesStyle extends Style {
     this.cloudW = this.refSize * 5
 
     // Initialize colors
-    this.bgColors = bgPalettes.slice(0, 4)
-    this.bgShadowColor = bgPalettes[4]
+    const paletteIndex = this._p5.random([0, 0, 0, 0, 0, 0, 0, 1, 1, 2])
+    const palette = palettes[paletteIndex]
+    this.bgColors = palette.bgPalettes.slice(0, 4)
+    this.bgShadowColor = palette.bgPalettes[4]
 
-    this.rainColors = rainPalettes.slice(2, 6)
-    this.rainShadowColor = rainPalettes[7]
+    this.rainColors = palette.rainPalettes.slice(0, 4)
+    this.rainShadowColor = palette.rainPalettes[5]
 
-    this.starsColors = starsPalettes.slice(0, 3)
-    this.starsShadowColor = starsPalettes[3]
+    this.starsColors = palette.starsPalettes.slice(0, 4)
+    this.starsShadowColor = palette.starsPalettes[5]
 
     this.flowField = this.createFlowField()
     this.rainArea = this.getRainArea()
@@ -48,9 +66,9 @@ export default class MattCirclesStyle extends Style {
 
   beforeDraw () {
     // Generate textures
-    this.background(this.bgColors, this.bgShadowColor, this._p5)
-    this.background(this.rainColors, this.rainShadowColor, this.rainTexture)
-    this.background(this.starsColors, this.starsShadowColor, this.starsTexture)
+    this.createTexture(this.bgColors, this.bgShadowColor, this._p5)
+    this.createTexture(this.rainColors, this.rainShadowColor, this.rainTexture)
+    this.createTexture(this.starsColors, this.starsShadowColor, this.starsTexture)
   }
 
   drawTile (tilePoints, frontLeftCorner3DCoord, isBorder) {
@@ -72,9 +90,11 @@ export default class MattCirclesStyle extends Style {
 
     // Draw border
     this.border(this.borderGap, this.bgColors[0])
-    // this._p5.image(this.rainMask, 0, 0, this._s, this._s)
   }
 
+  // ////////////
+  // Stars
+  // ////////////
   drawStarsMask (nbStars, g) {
     const stars = []
     const [smallSize, mediumSize, largeSize] = [0.3 * this.refSize, 0.5 * this.refSize, 0.7 * this.refSize]
@@ -173,14 +193,20 @@ export default class MattCirclesStyle extends Style {
     g.pop()
   }
 
+  // ////////////
+  // Cloud
+  // ////////////
   cloud (cx, cy, w, h, g) {
-    this.miniCloud(cx - w / 4, cy + h / 5, w, h, g)
-    this.miniCloud(cx + w / 5, cy + h / 5, w, h, g)
-    this.miniCloud(cx, cy, w, h, g)
+    const [smallWeight, largeWeight] = [this.refSize * 0.15, this.refSize * 0.2]
+    const weight = this._p5.random([smallWeight, smallWeight, largeWeight])
+    const [pointStyle, linearStyle] = [[0.25, 0.02, 5], [0.01, 0.001, 4]]
+    const gaps = this._p5.random([pointStyle, linearStyle, linearStyle])
+    this.miniCloud(cx - w / 4, cy + h / 5, w, h, weight, gaps, g)
+    this.miniCloud(cx + w / 5, cy + h / 5, w, h, weight, gaps, g)
+    this.miniCloud(cx, cy, w, h, weight, gaps, g)
   }
 
-  miniCloud (cx, cy, w, h, g) {
-    const weight = this.refSize * 0.15
+  miniCloud (cx, cy, w, h, weight, gaps, g) {
     let radiusW = w / 2 - weight
     let radiusH = h / 2 - weight
 
@@ -192,17 +218,21 @@ export default class MattCirclesStyle extends Style {
     g.push()
     g.noStroke()
     g.erase()
-    for (let a = 0; a < 4 * Math.PI; a += 0.01) {
+    const [aGap, raduisGap, piMax] = gaps
+    for (let a = 0; a < piMax * Math.PI; a += aGap) {
       const x = radiusW * Math.cos(a) + cx
       const y = radiusH * Math.sin(a) + cy
-      radiusW -= 0.001 * this.refSize
-      radiusH -= 0.001 * this.refSize
+      radiusW -= raduisGap * this.refSize
+      radiusH -= raduisGap * this.refSize
       g.circle(x, y, weight)
     }
     g.noErase()
     g.pop()
   }
 
+  // ////////////
+  // Rain
+  // ////////////
   rain (frontLeftCorner3DCoord, g) {
     const w = 0.08
     const h = 0.6
@@ -261,7 +291,10 @@ export default class MattCirclesStyle extends Style {
     return img
   }
 
-  background (colors, shadowColor, g) {
+  // ////////////
+  // Tools
+  // ////////////
+  createTexture (colors, shadowColor, g) {
     const rs = this.refSize
     const size = rs * 0.35
     const weight = rs * 0.12
