@@ -20,6 +20,8 @@ export default class MattCirclesStyle extends Style {
     this.minSkyHeight = 5 * this._s / 12
     this.borderGap = this._s / 20
     this.nbStars = 200
+    this.cloudH = this.refSize * 3
+    this.cloudW = this.refSize * 5
 
     // Initialize colors
     this.bgColors = bgPalettes.slice(0, 4)
@@ -33,6 +35,7 @@ export default class MattCirclesStyle extends Style {
 
     this.flowField = this.createFlowField()
     this.rainArea = this.getRainArea()
+    this.rainAreaImg = this.rainAreaImg()
 
     // Create textures and mask for rain
     this.rainMask = this.createGraphics(s, s)
@@ -63,12 +66,13 @@ export default class MattCirclesStyle extends Style {
     this.drawStarsMask(this.nbStars, this.starsMask)
 
     // Draw rain and stars with textures on sketch
+    this.cloud((this.rainArea[0].x + this.rainArea[1].x) / 2, this.rainArea[2].y - this.cloudH / 2, this.cloudW, this.cloudH, this.rainMask)
     this.drawImage(this.rainMask, this.rainTexture)
     this.drawImage(this.starsMask, this.starsTexture)
 
     // Draw border
     this.border(this.borderGap, this.bgColors[0])
-    // this._p5.image(this.rainArea, 0, 0, this._s, this._s)
+    // this._p5.image(this.rainMask, 0, 0, this._s, this._s)
   }
 
   drawStarsMask (nbStars, g) {
@@ -135,7 +139,7 @@ export default class MattCirclesStyle extends Style {
 
   inTheSky (star) {
     if (star === undefined) return false
-    const img = this.rainArea
+    const img = this.rainAreaImg
     const [r, g, b] = img.get(star.x, star.y)
     const pixelc = this._p5.color(r, g, b)
 
@@ -169,9 +173,39 @@ export default class MattCirclesStyle extends Style {
     g.pop()
   }
 
+  cloud (cx, cy, w, h, g) {
+    this.miniCloud(cx - w / 4, cy + h / 5, w, h, g)
+    this.miniCloud(cx + w / 5, cy + h / 5, w, h, g)
+    this.miniCloud(cx, cy, w, h, g)
+  }
+
+  miniCloud (cx, cy, w, h, g) {
+    const weight = this.refSize * 0.15
+    let radiusW = w / 2 - weight
+    let radiusH = h / 2 - weight
+
+    g.push()
+    g.fill('#000')
+    g.ellipse(cx, cy, w, h)
+    g.pop()
+
+    g.push()
+    g.noStroke()
+    g.erase()
+    for (let a = 0; a < 4 * Math.PI; a += 0.01) {
+      const x = radiusW * Math.cos(a) + cx
+      const y = radiusH * Math.sin(a) + cy
+      radiusW -= 0.001 * this.refSize
+      radiusH -= 0.001 * this.refSize
+      g.circle(x, y, weight)
+    }
+    g.noErase()
+    g.pop()
+  }
+
   rain (frontLeftCorner3DCoord, g) {
     const w = 0.08
-    const h = 0.7
+    const h = 0.6
     const p1 = new Vector(0.5 - w / 2, 0.5 - h / 2)
     const p2 = new Vector(0.5 + w / 2, 0.5 - h / 2)
     const p3 = new Vector(0.5 + w / 2, 0.5 + h / 2)
@@ -202,7 +236,6 @@ export default class MattCirclesStyle extends Style {
     const p2 = this._p5.createVector().set(this._projectionCalculator3d.getProjectedPoint([this._gridSizeX / 2, 0, 0]))
     const p3 = this._p5.createVector().set(this._projectionCalculator3d.getProjectedPoint([-this._gridSizeX / 2, this._gridSizeY, 0]))
     const p4 = this._p5.createVector().set(this._projectionCalculator3d.getProjectedPoint([this._gridSizeX / 2, this._gridSizeY, 0]))
-    const gap = this.refSize * 1.5
 
     const area = [p1, p2, p3, p4].map((p) => {
       return new Vector(p.x * this._s, p.y * this._s)
@@ -211,11 +244,18 @@ export default class MattCirclesStyle extends Style {
     if (area[2].y < this.minSkyHeight) area[2].y = this.minSkyHeight
     if (area[3].y < this.minSkyHeight) area[3].y = this.minSkyHeight
 
+    return area
+  }
+
+  rainAreaImg () {
+    const area = this.rainArea
+    const gap = this.refSize * 1.5
     const g = this.createGraphics(this._s, this._s)
     g.pixelDensity(1)
     g.background('#fff')
     g.fill('#000')
     g.quad(area[0].x - gap, area[0].y, area[1].x + gap, area[1].y, area[3].x + gap, area[3].y - gap, area[2].x - gap, area[2].y - gap)
+    g.ellipse((area[0].x + area[1].x) / 2, area[2].y - gap, this.cloudW + 2.5 * gap, this.cloudH + 2 * gap)
     const img = this.toImage(g)
     img.loadPixels()
     return img
